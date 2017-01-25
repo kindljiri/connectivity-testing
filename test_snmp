@@ -1,0 +1,74 @@
+#! /bin/bash
+
+usage()
+{
+  cat << EOF
+  Usage: $0 -h hostfile|-f file [-c community] [-o OID]
+
+  -f file               csv file with host,community,oid
+  -h hostfile           file with the list of host to test (one per line)
+  -c community
+  -o oid                by default it's sysName
+EOF
+}
+
+batchtest()
+{
+  for line in `cat $FILE`
+  do
+    host=`echo $line | cut -d , -f 1`
+    COMM=`echo $line | cut -d , -f 2`
+    OID=`echo $line | cut -d , -f 3`
+    echo -n $host,
+    snmpget -v 2c -c $COMM $host $OID.0
+  done
+}
+
+hosttest()
+{
+  for host in `cat $HFILE`
+  do
+    echo -n $host,
+    snmpget -v 2c -c $COMM $host $OID.0
+    #echo -n $host,
+    #snmpget -v 1 -c $COMM $host $OID.0
+  done
+}
+
+#main
+
+FILE=
+HFILE=
+COMM='public'
+OID='sysName'
+
+while getopts "f:h:c:o:" OPTION
+do
+  case $OPTION in
+  f)
+    FILE=$OPTARG
+    batchtest
+    ;;
+  h)
+    HFILE=$OPTARG
+    hosttest
+    ;;
+  c)
+    COMM=$OPTARG
+    ;;
+  o)
+    OID=$OPTARG
+    ;;
+  esac
+done
+
+if [[ -z $HFILE ]]
+then
+  if [[ -z $FILE ]]
+  then
+    usage
+    exit 1
+  fi
+fi
+
+exit 0

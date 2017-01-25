@@ -1,0 +1,43 @@
+#! /bin/bash
+
+usage()
+{
+  cat << EOF
+  Usage: $0 -h hostfile 
+
+  -h hostfile		file with the list of host to test (one per line)
+EOF
+}
+
+#test ICMP connectivity with ping
+testICMP()
+{
+  return `ping -c 4 -q $1 | grep " 100% packet loss," | wc -l`
+}
+
+HFILE=
+
+while getopts "h:" OPTION
+do
+  case $OPTION in
+  h)
+    HFILE=$OPTARG
+    ;;
+  esac
+done
+
+if [[ -z $HFILE ]] 
+then
+  usage
+  exit 1
+fi
+
+for host in `cat $HFILE`
+do
+  if `testICMP $host`
+  then
+    echo "$host,ok"
+  else
+    echo "$host,no connectivity"
+  fi
+done
