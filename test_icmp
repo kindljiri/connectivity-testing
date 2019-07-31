@@ -1,5 +1,10 @@
 #! /bin/bash
 
+# Simple script testing ICMP connectivity to devices given in file, 
+# one device per line. Script use ping command to do the test.
+# Author: Jiri Kindl
+# Version: 20171121
+
 usage()
 {
   cat << EOF

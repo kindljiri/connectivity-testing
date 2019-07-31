@@ -1,0 +1,41 @@
+#! /bin/bash
+
+# Simple script testing DNS resolution of devices given in file, 
+# one device per line. Script use host command to do the test.
+# Author: Jiri Kindl
+# Version: 20171121
+
+usage()
+{
+  cat << EOF
+  Usage: $0 -h hostfile 
+
+  -h hostfile		file with the list of host to test (one per line)
+EOF
+}
+
+HFILE=
+
+while getopts "h:" OPTION
+do
+  case $OPTION in
+  h)
+    HFILE=$OPTARG
+    ;;
+  esac
+done
+
+if [[ -z $HFILE ]] 
+then
+  usage
+  exit 1
+fi
+
+echo "Query,DNS Result"
+
+for test_host in `cat $HFILE`
+do
+  echo -n "$test_host,"
+  raw_res=`host $test_host`
+  echo $raw_res | awk '{if($5~/NXDOMAIN/){print "Not Found";};if($3~/address/){print $4;};if($4~/pointer/){print $5;}}' | sed 's/\.$//'
+done

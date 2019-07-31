@@ -4,20 +4,21 @@
 .DESCRIPTION  
     Script takes IP addresses from file (one IP per line) and test TCP port connection.
 .NOTES  
-    File Name      : autotrblsht.ps1  
+    File Name      : test_tcp.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
+    Version        : 20190730
     Copyright 2015 - Jiri Kindl    
 .LINK  
     
 .EXAMPLE  
-    .\test_tcp.ps1
+    .\test_tcp.ps1 -inputfile intputfile.txt -port NUMBER
 #>
 
 #pars parametrs with param
 
-param([string]$inputfile = "default",
-[int]$port = 5895
+param([string]$inputfile,
+[int]$port
 )
 
 Function usage {
@@ -27,23 +28,37 @@ Function usage {
   exit
 }
 
+if ((!$inputfile) -or (!$port)) {
+  usage
+}
+
 try {
   $ips=get-content $inputfile -ErrorAction Stop
   
-  "Host/IP,Port $port"
+  "IP,TCP $port"
 
   Foreach ($ip in $ips) {
+    $ip=$ip.trim()
     $t = New-Object Net.Sockets.TcpClient
     try {
       $t.Connect($ip,$port)
       $TCPTestResult = $t.Connected
     }
-    catch {
-      $TCPTestResult = "no connectivity" #FALSE
-    }
+    catch [System.Net.Sockets.SocketException] {
+        $TCPTestResult = $error[0].ToString()
+        if ($TCPTestResult -CMatch 'A connection attempt failed because the connected party did not properly respond after a period of time') {
+          $TCPTestResult = "Time out"
+        }
+        elseif ($TCPTestResult -CMatch 'No connection could be made because the target machine actively refused') {
+          $TCPTestResult = "Connection refused"
+        }
+      }
+      catch {
+        $TCPTestResult = "no connectivity" #FALSE
+      }
 
     "$ip,$TCPTestResult"
-}
+  }
 }
 catch [System.Management.Automation.ItemNotFoundException] {
   "No such file"
@@ -51,5 +66,5 @@ catch [System.Management.Automation.ItemNotFoundException] {
   usage
 }
 catch {
-  $Error
+  $Error[0]
 }

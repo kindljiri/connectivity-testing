@@ -1,0 +1,65 @@
+#! /bin/bash
+
+# Simple script testing SSH connectivity and credentials to devices given in file, 
+# one device per line and credentials given -u and -p parametrs.
+# 
+# Author: Jiri Kindl
+# Version: 20171127
+
+usage()
+{
+  cat << EOF
+  Usage: $0 -h hostfile -u username -p password [-c command] 
+
+  -h hostfile           file with the list of host to test (one per line)
+  -u username
+  -p password           
+  -c command		by default hostname
+EOF
+}
+
+hosttest()
+{
+  for TEST_HOST in `cat $HFILE`
+  do
+    echo -n "$TEST_HOST,"
+    sshpass -p $PASSWORD ssh -l $USERNAME -oStrictHostKeyChecking=no $TEST_HOST $COMMAND 
+  done
+}
+#main
+
+HFILE=
+USERNAME=
+PASSWORD=
+COMMAND="hostname"
+
+while getopts "h:p:u:c:" OPTION
+do
+  case $OPTION in
+   p)
+     PASSWORD=$OPTARG
+     ;;
+  h)
+    HFILE=$OPTARG
+    ;;
+  u)
+    USERNAME=$OPTARG
+    ;;
+  c)
+    COMMAND=$OPTARG
+    ;;
+  esac
+done
+
+if [[ -z $HFILE ]]
+then
+  if [[ -z $FILE ]]
+  then
+    usage
+    exit 1
+  fi
+fi
+
+echo "Host,Results of $COMMAND"
+hosttest
+exit 0

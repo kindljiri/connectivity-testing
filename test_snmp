@@ -51,7 +51,6 @@ do
     ;;
   h)
     HFILE=$OPTARG
-    hosttest
     ;;
   c)
     COMM=$OPTARG
@@ -70,5 +69,7 @@ then
     exit 1
   fi
 fi
+
+hosttest
 
 exit 0

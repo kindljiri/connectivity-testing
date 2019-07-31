@@ -1,0 +1,62 @@
+#! /bin/bash
+
+# Simple script testing TCP connectivity to devices given in file, 
+# one device per line and port given by parametr p. By default it test port 22.
+# Script use timeout command/utility to do the test.
+# Author: Jiri Kindl
+# Version: 20171121
+
+usage()
+{
+  cat << EOF
+  Usage: $0 -h hostfile [-p port]
+
+  -h hostfile           file with the list of host to test (one per line)
+  -p port               by default it's 22
+EOF
+}
+
+hosttest()
+{
+  for TEST_HOST in `cat $HFILE`
+  do
+    timeout $TIMEOUT_SECONDS bash -c "cat < /dev/null > /dev/tcp/${TEST_HOST}/${PORT}" &> /dev/null
+    if [ "$?" -ne 0 ]; then
+      echo $TEST_HOST,Connection failed
+    else
+      echo $TEST_HOST,Connection succeeded
+    fi
+    sleep 1
+  done
+}
+
+#main
+
+HFILE=
+TIMEOUT_SECONDS=5
+PORT=22
+
+while getopts "h:p:" OPTION
+do
+  case $OPTION in
+   p)
+     PORT=$OPTARG
+     ;;
+  h)
+    HFILE=$OPTARG
+    ;;
+  esac
+done
+
+if [[ -z $HFILE ]]
+then
+  if [[ -z $FILE ]]
+  then
+    usage
+    exit 1
+  fi
+fi
+
+echo "Host,TCP $PORT"
+hosttest
+exit 0
