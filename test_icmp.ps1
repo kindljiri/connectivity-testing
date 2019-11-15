@@ -7,7 +7,7 @@
     File Name      : test_icmp.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 20190530
+    Version        : 20191107
 
     Copyright 2015 - Jiri Kindl
 .LINK  
@@ -18,12 +18,16 @@
 
 #pars parametrs with param
 
-param([string]$inputfile = "default")
+param([string]$inputfile, [switch]$help)
 
 Function usage {
   "test_icmp.ps1 -inputfile inputfile.txt"
   "inputfile - file with IPs one per line"
   exit
+}
+
+if ((!$inputfile) -or ($help)) {
+  usage
 }
 
 try {
@@ -43,7 +47,7 @@ try {
   }
 }
 catch [System.Management.Automation.ItemNotFoundException] {
-  "No such file"
+  "ERROR: No such file: $inputfile"
   ""
   usage
 }

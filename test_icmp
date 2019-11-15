@@ -3,7 +3,7 @@
 # Simple script testing ICMP connectivity to devices given in file, 
 # one device per line. Script use ping command to do the test.
 # Author: Jiri Kindl
-# Version: 20171121
+# Version: 20190920
 
 usage()
 {
@@ -36,6 +36,8 @@ then
   usage
   exit 1
 fi
+
+echo "Host,ICMP"
 
 for host in `cat $HFILE`
 do

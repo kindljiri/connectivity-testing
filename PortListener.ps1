@@ -5,7 +5,7 @@
     Bind to TCP or UDP port and listen, if switch -udp not used by default it listen on TCP
 .NOTES  
     File Name      : PortListener.ps1
-    Version        : 20180830  
+    Version        : 20191107 
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
 .LINK  
@@ -16,7 +16,14 @@
 
 #pars parametrs with param
 
-param([int]$port = 80,[switch]$udp)
+param([int]$port,[switch]$udp, [switch]$help)
+
+Function usage {
+  "PortListener.ps1 -port NUM"
+  "port - Port number, by defualt TCP port"
+  "udp - use UDP port"
+  exit
+}
 
 function udp-listen($udpport) {
     $endpoint = New-Object System.Net.IPEndPoint ([IPAddress]::Any,$udpport)
@@ -48,6 +55,10 @@ function tcp-listen($tcpport) {
     write-host "Check there isn't other service listening on the port", $tcpport
     write-host "use option -port NUM to specifi custome port"
   }
+}
+
+if ((!$port) -or ($help)) {
+  usage
 }
 
 write-host "Opening port listener on", $port

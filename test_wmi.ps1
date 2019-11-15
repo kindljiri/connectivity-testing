@@ -7,7 +7,7 @@
     File Name      : test_wmi.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 20190625
+    Version        : 20191107
     Copyright 2015 - Jiri Kindl
 .LINK  
     
@@ -17,19 +17,29 @@
 
 #pars parametrs with param
 
-param([string]$inputfile = "default", [string]$username = "test", [string]$password = "ptest")
+param([string]$inputfile, [string]$username, [string]$password, [string]$namespace="root\cimv2", [string]$class="Win32_Computersystem", [string]$select="name", [switch]$help )
 
 Function usage {
-  "test_wmi.ps1 -inputfile inputfile.txt -username YourUserName -password YourPassword"
-  "inputfile - file with IPs one per line"
+  "test_wmi.ps1 -inputfile inputfile.txt [-username YourUserName] [-password YourPassword]"
+  "inputfile - file with Hosts,FQDN or IPs one per line"
+  "username - username, if it's domain user use 'domain\username', if not provided you'll be asked interactively"
+  "password - password, if not provided you'll be asked interactively"
   exit
 }
 
-$user = "$username"
+if (!($inputfile) -or ($help)) {
+  usage
+}
 
-$pass = convertto-securestring -String "$password" -AsPlainText -Force
-$credential = new-object -typename System.Management.Automation.PSCredential -argumentlist $user,$pass
+if (($username) -and ($password)) {
+  $user = "$username"
 
+  $pass = convertto-securestring -String "$password" -AsPlainText -Force
+  $credential = new-object -typename System.Management.Automation.PSCredential -argumentlist $user,$pass
+}
+else {
+  $credential = Get-Credential -Message "WMI credentials" -UserName $Username
+}
 
 try {
   $ips=get-content $inputfile -ErrorAction Stop
@@ -37,8 +47,8 @@ try {
   Foreach ($ip in $ips) {
     $ip = $ip.trim()
     try {
-      $wmi = Get-WmiObject -computername $ip -Credential $credential Win32_Computersystem -ErrorAction Stop| Select-Object -Property Name
-      $wmiResultString = $wmi.name
+      $wmi = Get-WmiObject -computername $ip -Credential $credential -Namespace $namespace -Class $class  -ErrorAction Stop| Select-Object -Property Name
+      $wmiResultString = $wmi.$select
     }
     catch [System.Runtime.InteropServices.COMException] {
       $wmiResultString = $Error[0]

@@ -7,7 +7,7 @@
     File Name      : test_dns.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 20190530
+    Version        : 20191107
     Copyright 2015 - Jiri Kindl
 .LINK  
     
@@ -17,13 +17,17 @@
 
 #pars parametrs with param
 
-param([string]$inputfile = "default", [switch]$reverse)
+param([string]$inputfile, [switch]$reverse, [switch]$help)
 
 Function usage {
   "test_dns.ps1 -inputfile inputfile.txt"
   "inputfile - file with IPs one per line"
   "reverse - do reverse resolution"
   exit
+}
+
+if ((!$inputfile) -or ($help)) {
+  usage
 }
 
 try {
@@ -47,7 +51,7 @@ try {
   }
 }
 catch [System.Management.Automation.ItemNotFoundException] {
-  "No such file"
+  "Error: No such file: $inputfile"
   ""
   usage
 }

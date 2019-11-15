@@ -7,7 +7,7 @@
     File Name      : test_tcp.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 20190730
+    Version        : 20191107
     Copyright 2015 - Jiri Kindl    
 .LINK  
     
@@ -17,9 +17,7 @@
 
 #pars parametrs with param
 
-param([string]$inputfile,
-[int]$port
-)
+param([string]$inputfile, [int]$port, [switch]$help)
 
 Function usage {
   "test_tcp.ps1 -inputfile inputfile.txt [-port NUMBER]"
@@ -28,7 +26,7 @@ Function usage {
   exit
 }
 
-if ((!$inputfile) -or (!$port)) {
+if ((!$inputfile) -or (!$port) -or ($help)) {
   usage
 }
 

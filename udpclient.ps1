@@ -7,7 +7,7 @@
     File Name      : udpclient.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 20190730
+    Version        : 20191107
     Copyright 2019 - Jiri Kindl    
 .LINK  
     
@@ -18,17 +18,18 @@
 #pars parametrs with param
 Param ([string] $device, 
 [int] $port, 
-[string] $message = "hello")
+[string] $message = "hello",
+[switch]$help)
 
 Function usage {
   "udpclient.ps1 -device FQDNorIP -port NUMBER -message sometext"
   "device - file with IPs one per line"
-  "port NUMBER - number of port to test"
+  "port NUMBER - number of UDP port to test"
   "message to send - by default hello"
   exit
 }
 
-if ((!$device) -or (!$port)) {
+if ((!$device) -or (!$port) -or ($help)) {
   usage
 }
 

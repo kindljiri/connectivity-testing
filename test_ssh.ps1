@@ -7,7 +7,7 @@
     File Name      : test_ssh.ps1  
     Author         : Jiri Kindl; kindl_jiri@yahoo.com
     Prerequisite   : PowerShell V2 over Vista and upper.
-    Version        : 201906295
+    Version        : 20191107
     Copyright 2019 - Jiri Kindl
 .LINK  
     
@@ -17,12 +17,16 @@
 
 #pars parametrs with param
 
-param([string]$inputfile = "default", [string]$username = "test", [string]$password = "ptest")
+param([string]$inputfile = "default", [string]$username = "test", [string]$password = "ptest", [switch]$help)
 
 Function usage {
   "test_ssh.ps1 -inputfile inputfile.txt -username YourUserName -password YourPassword"
   "inputfile - file with IPs one per line"
   exit
+}
+
+if (!($inputfile) -or ($help)) {
+  usage
 }
 
 $user = "$username"
