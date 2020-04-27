@@ -1,17 +1,15 @@
 #! /bin/bash
 
-# Simple script testing TCP connectivity to devices and port given in file, 
-# one device per line and port
-# When -t is used it do create a troubleshooting file, containing interface info
-# routing info, and TCP traceroute results for the connection which fails
+# Simple script testing TCP connectivity to devices given in file, 
+# one device per line and port given by parametr p. By default it test port 22.
 # Script use timeout command/utility to do the test.
 # Author: Jiri Kindl
-# Version: 20190328
+# Version: 20200407
 
 usage()
 {
   cat << EOF
-  Usage: $0 -r rulefile [-t]
+  Usage: $0 -r rulefile
 
   -r rulefile           file with comma seperated values: hostname,port (one record per line)
 EOF
@@ -30,7 +28,8 @@ troubleshoot()
 
 hosttest()
 {
-  for TEST_HOST in `cat $RFILE`
+  #Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+  for TEST_HOST in $(sed -e 's/\r//' $RFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
   do
     HOST=`echo $TEST_HOST | cut -d, -f1`
     PORT=`echo $TEST_HOST | cut -d, -f2`
@@ -71,7 +70,7 @@ do
 done
 
 
-if [[ -z $RFILE ]]
+if [ -z $RFILE ]
 then
   usage
   exit 1
@@ -89,7 +88,7 @@ if [ $TRBLSHT -eq 0 ]; then
   echo "Interfaces:">> $TFILE
   echo "-----------">> $TFILE
   ifconfig >> $TFILE
-  echo "Routing Table:">> $TFILE
+  echo "Routing:">> $TFILE
   echo "--------">> $TFILE
   netstat -rn >> $TFILE
 

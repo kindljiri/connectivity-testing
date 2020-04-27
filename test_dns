@@ -3,7 +3,7 @@
 # Simple script testing DNS resolution of devices given in file, 
 # one device per line. Script use host command to do the test.
 # Author: Jiri Kindl
-# Version: 20171121
+# Version: 20200407
 
 usage()
 {
@@ -25,15 +25,15 @@ do
   esac
 done
 
-if [[ -z $HFILE ]] 
+if [ -z $HFILE ] 
 then
   usage
   exit 1
 fi
 
 echo "Query,DNS Result"
-
-for test_host in `cat $HFILE`
+#Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+for test_host in $(sed -e 's/\r//' $HFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
 do
   echo -n "$test_host,"
   raw_res=`host $test_host`

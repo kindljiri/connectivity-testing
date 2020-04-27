@@ -3,7 +3,7 @@
 # Simple script testing ICMP connectivity to devices given in file, 
 # one device per line. Script use ping command to do the test.
 # Author: Jiri Kindl
-# Version: 20190920
+# Version: 20200407
 
 usage()
 {
@@ -31,15 +31,14 @@ do
   esac
 done
 
-if [[ -z $HFILE ]] 
+if [ -z $HFILE ] 
 then
   usage
   exit 1
 fi
 
-echo "Host,ICMP"
-
-for host in `cat $HFILE`
+#Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+for host in $(sed -e 's/\r//' $HFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
 do
   if `testICMP $host`
   then

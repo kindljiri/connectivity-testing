@@ -4,7 +4,7 @@
 # one device per line and port given by parametr p. By default it test port 22.
 # Script use timeout command/utility to do the test.
 # Author: Jiri Kindl
-# Version: 20171121
+# Version: 20200407
 
 usage()
 {
@@ -18,7 +18,8 @@ EOF
 
 hosttest()
 {
-  for TEST_HOST in `cat $HFILE`
+  #Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+  for TEST_HOST in $(sed -e 's/\r//' $HFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
   do
     timeout $TIMEOUT_SECONDS bash -c "cat < /dev/null > /dev/tcp/${TEST_HOST}/${PORT}" &> /dev/null
     if [ "$?" -ne 0 ]; then
@@ -48,13 +49,10 @@ do
   esac
 done
 
-if [[ -z $HFILE ]]
+if [ -z $HFILE ]
 then
-  if [[ -z $FILE ]]
-  then
     usage
     exit 1
-  fi
 fi
 
 echo "Host,TCP $PORT"

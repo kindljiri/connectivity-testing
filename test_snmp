@@ -1,5 +1,6 @@
 #! /bin/bash
-
+# Author: Jiri Kindl
+# Version: 20200407
 usage()
 {
   cat << EOF
@@ -14,7 +15,8 @@ EOF
 
 batchtest()
 {
-  for line in `cat $FILE`
+  #Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+  for line in $(sed -e 's/\r//' $FILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
   do
     host=`echo $line | cut -d , -f 1`
     COMM=`echo $line | cut -d , -f 2`
@@ -26,7 +28,8 @@ batchtest()
 
 hosttest()
 {
-  for host in `cat $HFILE`
+  #Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+  for host in `sed -e 's/\r//' $HFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//'`
   do
     echo -n $host,
     snmpget -v 2c -c $COMM $host $OID.0
@@ -51,6 +54,7 @@ do
     ;;
   h)
     HFILE=$OPTARG
+    hosttest
     ;;
   c)
     COMM=$OPTARG
@@ -61,15 +65,13 @@ do
   esac
 done
 
-if [[ -z $HFILE ]]
+if [ -z $HFILE ]
 then
-  if [[ -z $FILE ]]
+  if [ -z $FILE ]
   then
     usage
     exit 1
   fi
 fi
-
-hosttest
 
 exit 0

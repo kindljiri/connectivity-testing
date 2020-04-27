@@ -1,29 +1,40 @@
 #! /bin/bash
 
 # Simple script testing SSH connectivity and credentials to devices given in file, 
-# one device per line and credentials given -u and -p parametrs.
+# one device per line.
+# Credentials given -u and -p parametrs !!NOT SECURE.
+# If credentials are not given script will ask.
 # 
 # Author: Jiri Kindl
-# Version: 20171127
+# Version: 20200408
 
 usage()
 {
   cat << EOF
-  Usage: $0 -h hostfile -u username -p password [-c command] 
+  Usage: $0 -h hostfile [-u username] [-p password] [-c command] 
 
-  -h hostfile           file with the list of host to test (one per line)
-  -u username
+  -h hostfile
+           file with the list of host to test (one per line)
+
+  -u username           
+           if username is not provided script will prompt you
+
   -p password           
-  -c command		by default hostname
+           if password is not provided script will prompt you, It's more SECURE to not provide password as parametr
+
+  -c command
+           by default hostname
 EOF
 }
 
 hosttest()
 {
-  for TEST_HOST in `cat $HFILE`
+  #Using sed to remove windows eol and trim the Text (remove leading and trailing spaces)
+  for TEST_HOST in $(sed -e 's/\r//' $HFILE | sed 's/^[ \t]*//' |sed 's/[ \t]*$//')
   do
-    echo -n "$TEST_HOST,"
-    sshpass -p $PASSWORD ssh -l $USERNAME -oStrictHostKeyChecking=no $TEST_HOST $COMMAND 
+    #echo -n "$TEST_HOST,"
+    res=$(sshpass -p $PASSWORD ssh -l $USERNAME -oStrictHostKeyChecking=no $TEST_HOST $COMMAND 2>&1)
+	echo "$TEST_HOST,$res"
   done
 }
 #main
@@ -51,14 +62,35 @@ do
   esac
 done
 
-if [[ -z $HFILE ]]
+#check hostname file existence
+if [ -z $HFILE ]
 then
-  if [[ -z $FILE ]]
-  then
-    usage
-    exit 1
-  fi
+  echo "ERROR: no hostfile entered"
+  usage
+  exit 1
 fi
+if [ ! -e $HFILE ]
+then
+  echo "ERROR: $HFILE not exist"
+  usage
+  exit 1
+fi
+
+if [ -z $USERNAME ]
+then
+  printf "Username: "
+  read USERNAME
+fi
+
+if [ -z $PASSWORD ]
+then
+  stty -echo
+  printf "Password: "
+  read PASSWORD
+  stty echo
+  printf "\n"
+fi
+
 
 echo "Host,Results of $COMMAND"
 hosttest
