@@ -12,7 +12,7 @@
 
 #Variables:
 Author='Jiri Kindl'
-Version='20220714'
+Version='20220719'
 #Version history at the end of the file:
 
 #VARIABLES
@@ -21,6 +21,7 @@ CIDR=
 TIMEOUT_SECONDS=5
 PORT=22
 TROUBLESHOOTING=0
+preffered_method='not entered'
 
 #VARIABLES DYNAMIC
 source_host=$(hostname)
@@ -30,13 +31,19 @@ source_ip=$(hostname -i)
 
 usage() {
   cat << EOF
-  Usage: $0 -h hostfile [-p port]
+  Usage: $0 -h hostfile [-p port] [-m method]
 
   Simple script testing TCP connectivity to devices given in file or as network address.
 
     -h hostfile  file with the list of host to test (one per line)
     -c csvfile   file with host,port combinations to check
     -n CIDR      network address in CIDR format (like 10.0.0.0/24)
+    -m method    one of the methods you preffer, if not available will use different one:
+                   bash
+                   netcat
+                   openssl
+                   telnet
+                   wget 
     -t           enables troubleshooting, do the traceroute and get the 
                  last visible hop in output
     -p port      by default it's 22
@@ -106,16 +113,21 @@ validateCIDR() {
 tcpconnect_openssl() {
   local TEST_HOST=$1
   local PORT=$2
-  tcp_result=$(openssl s_client -verify_return_error -connect $TEST_HOST:$PORT &> >(grep -E "connect:errno|CONNECTED"))
+  tcp_result=$(timeout $TIMEOUT_SECONDS openssl s_client -verify_return_error -connect $TEST_HOST:$PORT 2>&1)
+  tcp_result=$(echo $tcp_result | grep -o -E "connect:errno=[0-9]+|CONNECTED")
   case $tcp_result in
-    CONNECTED\(00000003\))  echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection succeeded,"
+    CONNECTED)  echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection succeeded,"
                             ;;
     connect:errno=113)      echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: No route to host,"
                             ;;
     connect:errno=111)      echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: Connection refused,"
                             ;;
     connect:errno=22)       echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: Unknown host,"
-                            ;;                        
+                            ;;
+    connect:errno=2)        echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: Name or service not known,"
+                            ;;                                       
+    '')                     echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: Timeout,"
+                            ;;
     *)                      echo "$source_host,$source_ip,$TEST_HOST,$PORT,Connection failed: $tcp_result,"
                             ;;
   esac
@@ -124,7 +136,18 @@ tcpconnect_openssl() {
 tcpconnect_wget() {
   local TEST_HOST=$1
   local PORT=$2
-  tcp_result=$(wget -t 1 http://$TEST_HOST:$PORT -O /dev/null &> >(grep Connecting) | cut -d' ' -f4- | sed 's/failed:/Connection failed:/' | sed 's/connected./Connection succeeded/')
+  tcp_result=$(wget -T $TIMEOUT_SECONDS -t 1 http://$TEST_HOST:$PORT -O /dev/null 2>&1 | grep -E 'Connecting |wget:' | sed 's/wget:/Connection failed:/' | sed 's/Connecting to .*\.\.\. //'| sed 's/failed:/Connection failed:/' | sed 's/connected./Connection succeeded/' |head -n 1)
+  echo "$source_host,$source_ip,$TEST_HOST,$PORT,$tcp_result"
+}
+
+tcpconnect_telnet() {
+  local TEST_HOST=$1
+  local PORT=$2
+  tcp_result=$(echo -n '\035\nquit' | timeout $TIMEOUT_SECONDS telnet $TEST_HOST $PORT 2>&1| grep -E "Connected to |telnet: "|sed 's/Connected to .*/Connection succeeded/'|sed 's/.* Connection refused/Connection failed: Connection refused/' | sed 's/.* Name or service not known/Connection failed: Name or service not known/'|sed 's/.* No route to host/Connection failed: No route to host/')
+  if [ "$tcp_result" = '' ]
+  then
+    tcp_result='Connection failed: Timeout'
+  fi
   echo "$source_host,$source_ip,$TEST_HOST,$PORT,$tcp_result"
 }
 
@@ -171,6 +194,8 @@ hosttest() {
                ;;
       netcat)  tcpconnect_netcat $TEST_HOST $PORT
                ;;
+      telnet)  tcpconnect_telnet $TEST_HOST $PORT
+               ;;
     esac
     sleep 1
   done
@@ -187,6 +212,8 @@ cidrtest() {
       bash)    tcpconnect_bash $TEST_HOST $PORT
                ;;
       netcat)  tcpconnect_netcat $TEST_HOST $PORT
+               ;;
+      telnet)  tcpconnect_telnet $TEST_HOST $PORT
                ;;
     esac
     sleep 1
@@ -208,6 +235,8 @@ csvfiletest() {
       bash)    tcpconnect_bash $TEST_HOST $PORT
                ;;
       netcat)  tcpconnect_netcat $TEST_HOST $PORT
+               ;;
+      telnet)  tcpconnect_telnet $TEST_HOST $PORT
                ;;
     esac
     sleep 1
@@ -237,6 +266,9 @@ else
                                 CIDR=$1
                                 checkAndLoadLibIP
                                 validateCIDR
+                                ;;
+        -m)                     shift
+                                preffered_method=$1
                                 ;;                        
         -t)                     TROUBLESHOOTING=0
                                 ;;
@@ -253,6 +285,19 @@ fi
 #CHECK WHICH METHOD TO USE FOR TESTING BASED ON PROGRAMS AVAILABLE
 
 testing_method='unknown'
+preffered_method_available='no'
+
+#Check if telnet is available
+echo 'quit' | telnet &> /dev/null
+retval=$?
+if [ $retval -eq 0 ]
+then
+  testing_method='telnet'
+  if [ "$preffered_method" = 'telnet' ]
+  then
+    preffered_method_available='yes'
+  fi
+fi
 
 #Check if openssl is available
 openssl version &> /dev/null
@@ -261,6 +306,10 @@ retval=$?
 if [ $retval -eq 0 ]
 then
   testing_method='openssl'
+  if [ "$preffered_method" = 'openssl' ]
+  then
+    preffered_method_available='yes'
+  fi
 fi
 
 #Check if wget is available
@@ -270,6 +319,10 @@ retval=$?
 if [ $retval -eq 0 ]
 then
   testing_method='wget'
+  if [ "$preffered_method" = 'wget' ]
+  then
+    preffered_method_available='yes'
+  fi
 fi
 
 #Check if bash is available
@@ -279,6 +332,10 @@ retval=$?
 if [ $retval -eq 0 ]
 then
   testing_method='bash'
+  if [ "$preffered_method" = 'bash' ]
+  then
+    preffered_method_available='yes'
+  fi
 fi
 
 #Check if NetCat is available
@@ -288,12 +345,24 @@ retval=$?
 if [ $retval -eq 0 ]
 then
   testing_method='netcat'
+  if [ "$preffered_method" = 'netcat' ]
+  then
+    preffered_method_available='yes'
+  fi
 fi
 
 if [ $testing_method = 'unknown' ]
 then
   echo "ERROR: Could not find any of required programs: nc, openssl, wget, bash"
   exit 2
+fi
+
+if [ $preffered_method_available = 'yes' ]
+then
+  testing_method=$preffered_method
+  echo "DEBUG: Preffered method available. Using: $preffered_method"
+else
+  echo "DEBUG: Preffered method: $preffered_method NOT available. Using: $testing_method"
 fi
 
 ########################################################################
@@ -316,6 +385,9 @@ esac
 
 exit 0
 
+#TODO
+#echo -n '\035\nquit' | telnet $host $port
+
 #VERSION HISTORY:
 #Version,Comment
 #20210917,CORRECTED The CSV Header
@@ -323,3 +395,5 @@ exit 0
 #20220712,ADDED: different connection testing methods: netcat, wget, openssl, bash
 #20220713,ADDED: checkAndLoadLibIP to check if libip is present in system and can be used, and provide meaningfull error message in case it's not there.
 #20220714,ADDED: CSV input for connection testing, and changed the option -c to -n CIDR (n as network) and used -c as csvfile 
+#20220718,ADDED: -m option to let user pick the tcp connection testing method
+#20220719,ADDED: telnet testing method
